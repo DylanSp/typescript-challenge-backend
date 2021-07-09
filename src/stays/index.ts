@@ -15,25 +15,25 @@ const requestBodySchema = t.partial({
   skip: t.number,
   filters: t.partial({
     bedrooms: t.type({
-      eq: t.number
+      eq: t.number,
     }),
     beds: t.type({
-      eq: t.number
+      eq: t.number,
     }),
     bathrooms: t.type({
-      eq: t.number
+      eq: t.number,
     }),
-    amenities: t.array(t.string)
-  })
+    amenities: t.array(t.string),
+  }),
 });
 
 type ResponseBody = {
   meta: {
-    start: number,
-    size: number,
-    next?: number
-  },
-  results: unknown[]
+    start: number;
+    size: number;
+    next?: number;
+  };
+  results: unknown[];
 };
 
 const router = express.Router();
@@ -46,29 +46,29 @@ router.post("/", async (req, res) => {
   }
 
   let query: FilterQuery<any> = {};
-  
+
   if (requestBody.right.filters !== undefined) {
     if (requestBody.right.filters.bedrooms !== undefined) {
       query.bedrooms = {
-        $eq: requestBody.right.filters.bedrooms.eq
+        $eq: requestBody.right.filters.bedrooms.eq,
       };
     }
 
     if (requestBody.right.filters.beds !== undefined) {
       query.beds = {
-        $eq: requestBody.right.filters.beds.eq
+        $eq: requestBody.right.filters.beds.eq,
       };
     }
 
     if (requestBody.right.filters.bathrooms !== undefined) {
       query.bathrooms = {
-        $eq: requestBody.right.filters.bathrooms.eq
+        $eq: requestBody.right.filters.bathrooms.eq,
       };
     }
 
     if (requestBody.right.filters.amenities !== undefined) {
       query.amenities = {
-        $all: requestBody.right.filters.amenities
+        $all: requestBody.right.filters.amenities,
       };
     }
   }
@@ -80,37 +80,41 @@ router.post("/", async (req, res) => {
 
   const skip = requestBody.right.skip ?? 0;
 
-  const db = await getDatabase();
-  const col = db.collection("listingsAndReviews");
+  try {
+    const db = await getDatabase();
+    const col = db.collection("listingsAndReviews");
 
-  const resultsCursor = col
-    .find(query)
-    .sort({
-      _id: 1  // sort by _id ascending, so we have a defined order for skipping
-    })
-    .limit(limit)
-    .skip(skip);
-  const results = [];
-  for (let doc = 0; (doc < limit) && (await resultsCursor.hasNext()); doc++) {
-    results.push(await resultsCursor.next());
+    const resultsCursor = col
+      .find(query)
+      .sort({
+        _id: 1, // sort by _id ascending, so we have a defined order for skipping
+      })
+      .limit(limit)
+      .skip(skip);
+    const results = [];
+    for (let doc = 0; doc < limit && (await resultsCursor.hasNext()); doc++) {
+      results.push(await resultsCursor.next());
+    }
+
+    // resultsCursor.hasNext() doesn't return correct response for some reason;
+    // so instead, check based on number of results skipped + number of results returned
+    const hasNext = skip + results.length < (await resultsCursor.count());
+
+    const response: ResponseBody = {
+      meta: {
+        start: 0,
+        size: results.length,
+      },
+      results,
+    };
+    if (hasNext) {
+      response.meta.next = skip + limit;
+    }
+
+    res.json(response);
+  } catch (err) {
+    res.sendStatus(500);
   }
-
-  // resultsCursor.hasNext() doesn't return correct response for some reason;
-  // so instead, check based on number of results skipped + number of results returned
-  const hasNext = (skip + results.length) < (await resultsCursor.count());
-
-  const response: ResponseBody = {
-    meta: {
-      start: 0,
-      size: results.length
-    },
-    results
-  };
-  if (hasNext) {
-    response.meta.next = skip + limit;
-  }
-
-  res.json(response);
 });
 
 export default router;

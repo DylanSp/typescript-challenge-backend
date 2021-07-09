@@ -3,7 +3,7 @@ import { Db, MongoClient } from "mongodb";
 // cached singleton connection
 let database: Db | undefined;
 
-export async function connect(): Promise<Db> {
+export async function getDatabase(): Promise<Db> {
   if (database !== undefined) {
     return database;
   }

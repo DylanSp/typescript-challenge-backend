@@ -7,6 +7,10 @@ dotenv.config();
 const port = 3000;
 const app = express();
 
+// middleware
+app.use(express.json());
+
+// routes
 app.use("/stays", Stays);
 
 app.listen(port, () => {

@@ -33,12 +33,70 @@ Users should be able to filter listings on the following properties:
 
 For example, the following scenarios should be possible
 
-- Return all listings that have 3 bedrooms.
-- Return all listings that have 2 bedrooms and 2 bathrooms
-- Return all listings that have 4 bedrooms, 3 beds, and 3 bathrooms.
-- Return all listings that have "Wifi", a "Kitchen", and a "Washer"
-- Return all listings that have "Wifi" and 3 bedrooms.
-- etc.
+- Return all listings that have 3 bedrooms. Request body:
+```
+{
+  "filters": {
+    "bedrooms": {
+      "eq": 3
+    }
+  }
+}
+```
+- Return all listings that have 2 bedrooms and 2 bathrooms. Request body:
+```
+{
+  "filters": {
+    "bedrooms": {
+      "eq": 2
+    },
+    "bathrooms": {
+      "eq": 2
+    }
+  }
+}
+```
+- Return all listings that have 4 bedrooms, 3 beds, and 3 bathrooms. Request body:
+```
+{
+  "filters": {
+    "bedrooms": {
+      "eq": 4
+    },
+    "beds": {
+      "eq": 3
+    },
+    "bathrooms": {
+      "eq": 3
+    }
+  }
+}
+```
+- Return all listings that have "Wifi", a "Kitchen", and a "Washer". Request body:
+```
+{
+  "filters": {
+    "amenities": [
+      "Wifi",
+      "Kitchen",
+      "Washer"
+    ]
+  }
+}
+```
+- Return all listings that have "Wifi" and 3 bedrooms. Request body:
+```
+{
+  "filters": {
+    "bedrooms": {
+      "eq": 3
+    },
+    "amenities": [
+      "Wifi"
+    ]
+  }
+}
+```
 
 ##### 3. Add a pagination strategy to the `stays` endpoint
 

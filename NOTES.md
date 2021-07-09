@@ -18,3 +18,12 @@ The response body contains a "meta" field that specifies:
 - "next": only present if there are remaining results; if there are, what value to pass in for "skip" in a subsequent request to get the next page.
 
 From manual testing, this appears to work; however, I'm not sure if it's a valid approach if the collection being queried has insertions/deletions happening concurrent with a client making requests to page through results. I'm also not sure if I'm using the correct logic for paging through the MongoDB cursor; the documentation warns against combining multiple "cursor paradigms", I chose to use `next()` and `hasNext()` exclusively. (See https://docs.mongodb.com/drivers/node/current/fundamentals/crud/read-operations/cursor/#cursor-paradigms)
+
+# Reviews endpoint
+I didn't have time to get to the reviews endpoint. As a general sketch, the route would probably be `GET /reviews/:id`, using the `id` from the URL to specify the listing ID to retrieve reviews for. It would call `getDatabase()` from `db/index.ts`, which should reuse a MongoDB connection if one's already been established.
+
+# Testing
+With more time, I would have implemented integration/end-to-end tests, using the [supertest](https://www.npmjs.com/package/supertest) library. Ideally, rather than having these tests run against the MongoDB instance from .env, I would rely on a local MongoDB instance running, seeding it with initial test data before executing the test suite.
+
+# General code structure
+The one other structural point of concern I wasn't sure about was how to divide the filtering/pagination logic between `src/stays/index.ts` and `src/db/index.ts`. In a larger-scale application, I'd probably move at least some of it into `db` for reusability, separation of concerns, and easier testing; `stays` would only be responsible for parsing the request body and passing the necessary filters to `db`. 

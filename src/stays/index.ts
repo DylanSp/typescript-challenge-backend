@@ -4,9 +4,15 @@ import * as t from "io-ts";
 import { FilterQuery } from "mongodb";
 import { getDatabase } from "../db";
 
+// maximum number of listings that can be returned from one query;
+// user can specify a lower limit
+const MAX_LIMIT = 25;
+
 // defines an io-ts codex for validating request bodies
 // the static type can be examined with "type RequestBodySchema = t.TypeOf<typeof requestBodySchema>;"
 const requestBodySchema = t.partial({
+  limit: t.number,
+  skip: t.number,
   filters: t.partial({
     bedrooms: t.type({
       eq: t.number
@@ -20,6 +26,15 @@ const requestBodySchema = t.partial({
     amenities: t.array(t.string)
   })
 });
+
+type ResponseBody = {
+  meta: {
+    start: number,
+    size: number,
+    next?: number
+  },
+  results: unknown[]
+};
 
 const router = express.Router();
 
@@ -58,11 +73,44 @@ router.post("/", async (req, res) => {
     }
   }
 
+  let limit = MAX_LIMIT;
+  if (requestBody.right.limit !== undefined && requestBody.right.limit < 25) {
+    limit = requestBody.right.limit;
+  }
+
+  const skip = requestBody.right.skip ?? 0;
+
   const db = await getDatabase();
   const col = db.collection("listingsAndReviews");
 
-  const results = await col.find(query, { limit: 10 });
-  res.json(await results.toArray());
+  const resultsCursor = col
+    .find(query)
+    .sort({
+      _id: 1  // sort by _id ascending, so we have a defined order for skipping
+    })
+    .limit(limit)
+    .skip(skip);
+  const results = [];
+  for (let doc = 0; (doc < limit) && (await resultsCursor.hasNext()); doc++) {
+    results.push(await resultsCursor.next());
+  }
+
+  // resultsCursor.hasNext() doesn't return correct response for some reason;
+  // so instead, check based on number of results skipped + number of results returned
+  const hasNext = (skip + results.length) < (await resultsCursor.count());
+
+  const response: ResponseBody = {
+    meta: {
+      start: 0,
+      size: results.length
+    },
+    results
+  };
+  if (hasNext) {
+    response.meta.next = skip + limit;
+  }
+
+  res.json(response);
 });
 
 export default router;
